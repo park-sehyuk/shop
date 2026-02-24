@@ -27,7 +27,7 @@ public class FileService {
     public String uploadFile(String folder,
                              String originalFileName,
                              byte[] fileData) throws Exception {
-
+        // git push용
         //uuid를 이용하여 고유한 파일 이름을 생성하기 위해 사용
         UUID uuid = UUID.randomUUID();
 
