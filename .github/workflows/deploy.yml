@@ -41,7 +41,7 @@ jobs:
       - name: AWS 인증 정보 설정
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: us-east-1
+          aws-region: ap-northeast-2
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
@@ -75,7 +75,7 @@ jobs:
             
             # EC2에서 ECR 로그인 추가
             aws ecr get-login-password --region ap-northeast-2 \
-            | docker login --username AWS --password-stdin [본인 ECR 레지스트리 주소]
+            | docker login --username AWS --password-stdin 623817051495.dkr.ecr.ap-northeast-2.amazonaws.com/market-server
             
             docker stop market-server || true
             docker rm market-server || true
