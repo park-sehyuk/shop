@@ -1,0 +1,83 @@
+name: CI/CD Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ 코드 가져오기
+      - name: GitHub 리포지토리에서 최신 코드 가져오기
+        uses: actions/checkout@v4
+
+      # 2️⃣ JDK 17 설치
+      - name: JDK 17 설치
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # 3️⃣ secrets 기반 application.yml 생성
+      - name: secrets 기반 application.yml 생성
+        run: |
+          mkdir -p ./src/main/resources
+          echo "${{ secrets.APPLICATION_PROPERTIES }}" > ./src/main/resources/application.yml
+          ls -l ./src/main/resources   # 파일 확인용 (옵션)
+
+      # 4️⃣ Gradle 빌드
+
+      - name: Gradle 실행 권한 부여
+        run: chmod +x ./market/gradlew
+
+      - name: 테스트 및 빌드
+        run: ./gradlew clean build -x test
+        working-directory: ./market
+
+      # 5️⃣ AWS 인증
+      - name: AWS 인증 정보 설정
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      # 6️⃣ ECR 로그인
+      - name: AWS ECR 로그인
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # 7️⃣ Docker 이미지 생성
+      - name: Docker 이미지 생성
+        run: docker build -t market-server:${{ github.sha }} ./market
+
+      # 8️⃣ Docker 이미지 태그
+      - name: Docker 이미지 태그
+        run: docker tag market-server:${{ github.sha }} ${{ steps.login-ecr.outputs.registry }}/market-server:${{ github.sha }}
+
+      # 9️⃣ Docker 이미지 ECR에 push
+      - name: Docker 이미지 ECR에 push
+        run: docker push ${{ steps.login-ecr.outputs.registry }}/market-server:${{ github.sha }}
+
+      # 🔟 EC2에서 기존 컨테이너 제거 & 새 컨테이너 실행
+      - name: EC2 접속 후 Green Deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_PRIVATE_KEY }}
+          script_stop: true
+          script: |
+            VERSION=${{ github.sha }}
+            
+            # EC2에서 ECR 로그인 추가
+            aws ecr get-login-password --region ap-northeast-2 \
+            | docker login --username AWS --password-stdin [본인 ECR 레지스트리 주소]
+            
+            docker stop market-server || true
+            docker rm market-server || true
+            docker pull ${{ steps.login-ecr.outputs.registry }}/market-server:$VERSION
+            docker run -d --name market-server -p 8082:8080 ${{ steps.login-ecr.outputs.registry }}/market-server:$VERSION
