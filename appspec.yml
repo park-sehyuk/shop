@@ -1,0 +1,21 @@
+version: 0.0
+os: linux
+
+files:
+  - source: /
+    destination: /home/ubuntu/market-server
+
+permissions:
+  - object: /home/ubuntu/market-server
+    owner: ubuntu
+    group: ubuntu
+    mode: 755
+    type:
+      - directory
+      - file
+
+hooks:
+  AfterInstall:
+    - location: scripts/start-server.sh
+      timeout: 300
+      runas: ubuntu

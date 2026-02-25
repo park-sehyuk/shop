@@ -31,7 +31,7 @@ jobs:
       # 4️⃣ Gradle 빌드
 
       - name: Gradle 실행 권한 부여
-        run: chmod +x ./market/gradlew
+        run: chmod +x ./gradlew
 
       - name: 테스트 및 빌드
         run: ./gradlew clean build -x test
