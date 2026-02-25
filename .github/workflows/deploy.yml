@@ -35,7 +35,6 @@ jobs:
 
       - name: 테스트 및 빌드
         run: ./gradlew clean build -x test
-        working-directory: ./market
 
       # 5️⃣ AWS 인증
       - name: AWS 인증 정보 설정
